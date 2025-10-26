@@ -2,20 +2,35 @@
 
 #include <SFML/Graphics.hpp>
 
-class Enemy {
+enum enemyType
+{
+    NORMAL,
+    RED_POWERUP,
+    BLUE_POWERUP,
+    PURPLE_POWERUP
+};
 
-public:
+class Enemy
+{
 
-	Enemy(float x, float y);
+  public:
+    Enemy(float x, float y);
+    ~Enemy() {};
 
-	void update(float dt);
-	void draw(sf::RenderWindow& window);
+    void draw(sf::RenderWindow &window);
 
-	sf::RectangleShape& getShape() { return shape; };
+    sf::RectangleShape &getShape()
+    {
+        return _shape;
+    };
+    enemyType getType()
+    {
+        return _type;
+    };
 
-private:
-
-	sf::RectangleShape shape;
-	float speed = 50.0f;
-
+  private:
+    sf::RectangleShape _shape;
+    float _speed = 50.0f;
+    enemyType _type;
+    enemyType getRandomType();
 };

@@ -1,74 +1,199 @@
 #include "Game.hpp"
+#include <algorithm>
+#include <iostream>
 
-Game::Game() :
-	window(sf::VideoMode({800, 600}), "Space Invaders - Base Game Jam"),
-	player(375.0f, 550.0f) 
+Game::Game(sf::RenderWindow &window, Player &player, InputHandler &inputHandler)
+    : _window(window), _player(player), _inputHandler(inputHandler)
 {
-
-	initEnemies();
+    initEnemies();
+    if (!_font.openFromFile("assets/Lavigne.ttf"))
+    {
+        std::cerr << "Font failed to load";
+        _window.close();
+    }
 }
 
 void Game::run()
 {
-	while (window.isOpen()) {
-		processEvents();
-		update();
-		render();
-	}
+    while (_window.isOpen())
+    {
+        processEvents();
+        update();
+        render();
+    }
+    std::cout << "Final score: " << _killCount << " kills. Nice work!" << std::endl;
 }
 
 void Game::initEnemies()
 {
-	for (int row = 0; row < 4; ++row) {
-		for (int col = 0; col < 10; ++col) {
-			float x = 60 + col * 60;
-			float y = 40 + row * 40;
-			enemies.emplace_back(x, y);
-		}
-	}
+    for (int row = 0; row < 4; ++row)
+    {
+        for (int col = 0; col < 10; ++col)
+        {
+            float x = 60 + col * 60;
+            float y = 0 + row * 40;
+            Enemy *newEnemy = new Enemy(x, y);
+            _enemies.push_back(newEnemy);
+        }
+    }
 }
 
 void Game::processEvents()
 {
-    while (auto event = window.pollEvent()) {
+    while (const std::optional event = _window.pollEvent())
+    {
         if (event->is<sf::Event::Closed>())
-            window.close();
+            _window.close();
     }
+}
+
+bool Game::collides(sf::RectangleShape shape1, sf::RectangleShape shape2)
+{
+    if (shape1.getGlobalBounds().findIntersection(shape2.getGlobalBounds()) != std::nullopt)
+        return true;
+    return false;
 }
 
 void Game::update()
 {
-	float dt = clock.restart().asSeconds();
-	player.update(dt, window);
+    float dt = _clock.restart().asSeconds();
+    _player.update(dt, _window);
+    _inputHandler.handleKeyPress();
+    handleEnemySpeed(dt);
+    handleEnemyMovement(dt);
+	addNewEnemies();
+}
 
-	// Move enemies
-	bool changeDirection = false;
-	float offset = 0.0f;
-	for (auto& enemy : enemies) {
-		sf::RectangleShape& enemyShape = enemy.getShape();
-		enemyShape.move({enemyDirection * enemySpeed * dt, 0});
-		if (enemyShape.getPosition().x <= 0 || enemyShape.getPosition().x + enemyShape.getSize().x >= window.getSize().x) {
-			float posX = enemyShape.getPosition().x;
-			offset = posX < 0.0f ? posX : posX + enemyShape.getSize().x - window.getSize().x;
-			changeDirection = true;
-		}
-	}
+void Game::handleEnemySpeed(float dt)
+{
+    _enemySpeedTimer += dt;
+    if (_enemySpeedTimer >= 10.0f)
+    {
+        _enemySpeed += 10;
+        _enemySpeedTimer = 0.0f;
+    }
 
-	if (changeDirection) {
-		enemyDirection *= -1;
-		for (auto& enemy : enemies) {
-			sf::RectangleShape& enemyShape = enemy.getShape();
-			enemyShape.move({offset * -1, enemyMoveDown});
-		}
-	}
+    if (_bluePowerupTime > 0)
+        _bluePowerupTime -= dt;
+}
+
+void Game::handleEnemyMovement(float dt)
+{
+    bool changeDirection = false;
+    for (auto enemy : _enemies)
+    {
+        sf::RectangleShape &enemyShape = enemy->getShape();
+        float moveX = _enemyDirection * _enemySpeed * dt;
+        if (_bluePowerupTime > 0.0f)
+            moveX = 0;
+        enemyShape.move({moveX, 0});
+        if (enemyShape.getPosition().x <= 0 ||
+            enemyShape.getPosition().x + enemyShape.getSize().x >= _window.getSize().x)
+        {
+            changeDirection = true;
+        }
+        if (enemyShape.getPosition().y >= (SCREEN_HEIGHT - (enemyShape.getSize().y / 2)))
+            _window.close();
+        handleCollisions(enemy);
+    }
+    static int count = 0;
+    if (changeDirection)
+    {
+        _enemyDirection *= -1;
+        for (auto enemy : _enemies)
+        {
+            sf::RectangleShape &enemyShape = enemy->getShape();
+            enemyShape.move({_enemyDirection * _enemySpeed * dt, _enemyMoveDown});
+        }
+    }
+}
+
+void Game::handleCollisions(Enemy *enemy)
+{
+    if (collides(enemy->getShape(), _player.getShape()))
+        _window.close();
+
+    auto &projectiles = _player.getProjectiles();
+    for (auto p : projectiles)
+    {
+        if (collides(enemy->getShape(), p->getShape()))
+        {
+            handlePowerups(enemy->getType());
+            projectiles.erase(std::find(projectiles.begin(), projectiles.end(), p));
+            _enemies.erase(std::find(_enemies.begin(), _enemies.end(), enemy));
+            _killCount++;
+            return;
+        }
+    }
+}
+
+void Game::handlePowerups(enemyType type)
+{
+    if (type == NORMAL)
+        return;
+    else if (type == RED_POWERUP)
+        _player.activateRedPowerUp();
+    else if (type == BLUE_POWERUP)
+        _bluePowerupTime = 3.0f;
+    else if (type == PURPLE_POWERUP)
+        activatePurplePowerup();
+}
+
+void Game::activatePurplePowerup()
+{
+    for (auto enemy : _enemies)
+    {
+        if (enemy->getType() != NORMAL)
+            continue;
+        if (std::rand() % 100 < 20)
+        {
+            _enemies.erase(std::find(_enemies.begin(), _enemies.end(), enemy));
+            _killCount++;
+        }
+    }
+}
+
+void Game::addNewEnemies()
+{
+    float lowestEnemyX = __FLT_MAX__;
+    float lowestEnemyY = __FLT_MAX__;
+    for (auto enemy : _enemies)
+    {
+        lowestEnemyX =
+            (enemy->getShape().getPosition().x < lowestEnemyX) ? (enemy->getShape().getPosition().x) : lowestEnemyX;
+        lowestEnemyY =
+            (enemy->getShape().getPosition().y < lowestEnemyY) ? (enemy->getShape().getPosition().y) : lowestEnemyY;
+    }
+    if (_enemies.size() == 0)
+        lowestEnemyX = 20.0f;
+    if (lowestEnemyY <= 20.0f or lowestEnemyX > 60.0f or lowestEnemyX < 0.0f)
+        return;
+    for (int col = 0; col < 10; ++col)
+    {
+        float x = lowestEnemyX + col * 60;
+        float y = 0;
+        Enemy *newEnemy = new Enemy(x, y);
+        _enemies.push_back(newEnemy);
+    }
+}
+
+void Game::displayTexts(sf::RenderWindow &window)
+{
+    sf::Text killCountText(_font);
+    killCountText.setString("Kill count: " + std::to_string(_killCount));
+    killCountText.setCharacterSize(24);
+    killCountText.setFillColor(sf::Color::White);
+    killCountText.setPosition({10.0f, SCREEN_HEIGHT - 40.0f});
+    window.draw(killCountText);
 }
 
 void Game::render()
 {
-	window.clear(sf::Color::Black);
-	player.draw(window);
+    _window.clear(sf::Color::Black);
+    _player.draw(_window);
+    displayTexts(_window);
 
-	for (auto& enemy : enemies)
-		enemy.draw(window);
-	window.display();
+    for (auto enemy : _enemies)
+        enemy->draw(_window);
+    _window.display();
 }

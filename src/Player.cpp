@@ -2,59 +2,79 @@
 
 Player::Player(float x, float y)
 {
-    shape.setSize({50.0f, 20.0f});
-    shape.setFillColor(sf::Color::Green);
-    shape.setPosition({x, y});
+    _shape.setSize({50.0f, 20.0f});
+    _shape.setFillColor(sf::Color::White);
+    _shape.setPosition({x, y});
 }
 
-void Player::update(float dt, sf::RenderWindow& window)
+void Player::update(float dt, sf::RenderWindow &window)
 {
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)) {
-        shape.move({-speed * dt, 0});
+    if (_moveLeft)
+        _shape.move({-_speed * dt, 0});
+    if (_moveRight)
+        _shape.move({_speed * dt, 0});
+    if (_redPowerUpTime > 0)
+    {
+        _redPowerUpTime -= dt;
+        _shootCooldown = 0.1f;
     }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)) {
-        shape.move({speed * dt, 0});
-    }
-
-    if (shape.getPosition().x < 0)
-        shape.setPosition({0, shape.getPosition().y});
-    if (shape.getPosition().x + shape.getSize().x > window.getSize().x)
-        shape.setPosition({window.getSize().x - shape.getSize().x, shape.getPosition().y});
-
-    timeSinceLastShot += dt;
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space) && timeSinceLastShot >= shootCooldown) {
-        shoot();
-        timeSinceLastShot = 0.0f;
+    if (_redPowerUpTime <= 0)
+    {
+        _redPowerUpTime = 0;
+        _shootCooldown = SHOT_COOLDOWN;
     }
 
-    for (auto& p : projectiles)
-        p.update(dt);
+    if (_shape.getPosition().x < 0)
+        _shape.setPosition({0, _shape.getPosition().y});
+    if (_shape.getPosition().x + _shape.getSize().x > window.getSize().x)
+        _shape.setPosition({window.getSize().x - _shape.getSize().x, _shape.getPosition().y});
 
-	int i = 0;
-	while (i < projectiles.size())
-	{
-		if (projectiles[i].isOffScreen(window))
-		{
-			std::swap(projectiles[i], projectiles.back());
-            projectiles.pop_back();
-            continue;
-		}
-		i++;
-	}
+    _timeSinceLastShot += dt;
 
+    for (auto p : _projectiles)
+    {
+        p->update(dt);
+        if (p->isOffScreen(window))
+            _projectiles.erase(std::find(_projectiles.begin(), _projectiles.end(), p));
+    }
 }
 
-void Player::draw(sf::RenderWindow& window)
+void Player::activateRedPowerUp()
 {
-    window.draw(shape);
-    for (auto& p : projectiles)
-        p.draw(window);
+    _redPowerUpTime = 5.0f;
+}
+
+void Player::movePlayerRight(bool b)
+{
+    if (b)
+        _moveRight = true;
+    else
+        _moveRight = false;
+}
+
+void Player::movePlayerLeft(bool b)
+{
+    if (b)
+        _moveLeft = true;
+    else
+        _moveLeft = false;
+}
+
+void Player::draw(sf::RenderWindow &window)
+{
+    window.draw(_shape);
+    for (auto &p : _projectiles)
+        p->draw(window);
 }
 
 void Player::shoot()
 {
-    sf::Vector2f pos = shape.getPosition();
-    pos.x += shape.getSize().x / 2.0f - 2.5f;
+    if (_timeSinceLastShot < _shootCooldown)
+        return;
+    sf::Vector2f pos = _shape.getPosition();
+    pos.x += _shape.getSize().x / 2.0f - 2.5f;
     pos.y -= 10.0f;
-    projectiles.emplace_back(pos);
+    Projectile* newProjectile = new Projectile(pos);
+    _projectiles.emplace_back(newProjectile);
+    _timeSinceLastShot = 0.0f;
 }

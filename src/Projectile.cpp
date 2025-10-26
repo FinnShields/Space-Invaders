@@ -1,24 +1,24 @@
 #include "Projectile.hpp"
 
 Projectile::Projectile(sf::Vector2f position, float speed)
-    : speed(speed)
+    : _speed(speed)
 {
-    shape.setSize({5.0f, 15.0f});
-    shape.setFillColor(sf::Color::Red);
-    shape.setPosition(position);
+    _shape.setSize({5.0f, 15.0f});
+    _shape.setFillColor(sf::Color::White);
+    _shape.setPosition(position);
 }
 
 void Projectile::update(float dt)
 {
-    shape.move({0.0f, -speed * dt});
+    _shape.move({0.0f, -_speed * dt});
 }
 
 void Projectile::draw(sf::RenderWindow& window)
 {
-    window.draw(shape);
+    window.draw(_shape);
 }
 
 bool Projectile::isOffScreen(const sf::RenderWindow& window) const
 {
-    return shape.getPosition().y + shape.getSize().y < 0;
+    return _shape.getPosition().y + _shape.getSize().y < 0;
 } 

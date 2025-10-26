@@ -2,19 +2,28 @@
 
 Enemy::Enemy(float x, float y)
 {
-	shape.setSize(sf::Vector2f(40.0f, 20.0f));
-	shape.setFillColor(sf::Color::Red);
-	shape.setPosition({x, y});
+	_shape.setSize(sf::Vector2f(40.0f, 20.0f));
+	_type = getRandomType();
+	sf::Color colour = _type == RED_POWERUP ? sf::Color::Red 
+								: _type == BLUE_POWERUP ? sf::Color::Blue 
+								: _type == PURPLE_POWERUP ? sf::Color::Magenta
+								: sf::Color::White;
+	_shape.setFillColor(colour);
+	_shape.setPosition({x, y});
 }
 
-void Enemy::update(float dt) 
+enemyType Enemy::getRandomType()
 {
-	sf::Vector2f direction {speed, 0};
-	shape.move(direction * dt);
+	if ((std::rand() % 100) <= 2)
+		return RED_POWERUP;
+	if ((std::rand() % 100) <= 2)
+		return BLUE_POWERUP;
+	if ((std::rand() % 100) <= 2)
+		return PURPLE_POWERUP;
+	return NORMAL;
 }
-
 
 void Enemy::draw(sf::RenderWindow& window) 
 {
-	window.draw(shape);
+	window.draw(_shape);
 }
