@@ -7,7 +7,8 @@ enum enemyType
     NORMAL,
     RED_POWERUP,
     BLUE_POWERUP,
-    PURPLE_POWERUP
+    PURPLE_POWERUP,
+    BLACK_POWERUP
 };
 
 class Enemy

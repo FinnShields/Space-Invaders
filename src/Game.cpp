@@ -57,19 +57,51 @@ bool Game::collides(sf::RectangleShape shape1, sf::RectangleShape shape2)
 void Game::update()
 {
     float dt = _clock.restart().asSeconds();
-    _player.update(dt, _window);
     _inputHandler.handleKeyPress();
+
+    switch (_state)
+    {
+    case (START):
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::Enter))
+            _state = GAME;
+        break;
+    case (GAME):
+        gameLoop(dt);
+        break;
+    case (END):
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::Enter))
+        {
+            _state = GAME;
+            resetGame();
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+void Game::resetGame()
+{
+    _enemies.clear();
+    _killCount = 0;
+    initEnemies();
+    _enemySpeed = ENEMY_INITIAL_SPEED;
+}
+
+void Game::gameLoop(float dt)
+{
+    _player.update(dt, _window);
     handleEnemySpeed(dt);
     handleEnemyMovement(dt);
-	addNewEnemies();
+    addNewEnemies();
 }
 
 void Game::handleEnemySpeed(float dt)
 {
     _enemySpeedTimer += dt;
-    if (_enemySpeedTimer >= 10.0f)
+    if (_enemySpeedTimer >= 2.5f)
     {
-        _enemySpeed += 10;
+        _enemySpeed += 6;
         _enemySpeedTimer = 0.0f;
     }
 
@@ -94,7 +126,7 @@ void Game::handleEnemyMovement(float dt)
             changeDirection = true;
         }
         if (enemyShape.getPosition().y >= (SCREEN_HEIGHT - (enemyShape.getSize().y / 2)))
-            _window.close();
+            _state = END;
         if (handleCollisions(i) == 0)
             i++;
     }
@@ -113,7 +145,7 @@ void Game::handleEnemyMovement(float dt)
 int Game::handleCollisions(size_t enemyIndex)
 {
     if (collides(_enemies[enemyIndex]->getShape(), _player.getShape()))
-        _window.close();
+        _state = END;
 
     auto &projectiles = _player.getProjectiles();
     size_t i = 0;
@@ -122,6 +154,8 @@ int Game::handleCollisions(size_t enemyIndex)
         if (collides(_enemies[enemyIndex]->getShape(), projectiles[i]->getShape()))
         {
             handlePowerups(_enemies[enemyIndex]->getType());
+            if (_enemies.size() == 0)
+                return 0;
             std::swap(projectiles[i], projectiles.back());
             projectiles.pop_back();
             std::swap(_enemies[enemyIndex], _enemies.back());
@@ -144,6 +178,8 @@ void Game::handlePowerups(enemyType type)
         _bluePowerupTime = 3.0f;
     else if (type == PURPLE_POWERUP)
         activatePurplePowerup();
+    else if (type == BLACK_POWERUP)
+        activateBlackPowerup();
 }
 
 void Game::activatePurplePowerup()
@@ -165,6 +201,12 @@ void Game::activatePurplePowerup()
         }
         i++;
     }
+}
+
+void Game::activateBlackPowerup()
+{
+    _killCount += _enemies.size();
+    _enemies.clear();
 }
 
 void Game::addNewEnemies()
@@ -193,21 +235,44 @@ void Game::addNewEnemies()
 
 void Game::displayTexts(sf::RenderWindow &window)
 {
-    sf::Text killCountText(_font);
-    killCountText.setString("Kill count: " + std::to_string(_killCount));
-    killCountText.setCharacterSize(24);
-    killCountText.setFillColor(sf::Color::White);
-    killCountText.setPosition({10.0f, SCREEN_HEIGHT - 40.0f});
-    window.draw(killCountText);
+    sf::Text text(_font);
+
+    if (_state == START)
+    {
+        text.setString("How many aliens can you kill before\nthey reach your base?\n\nArrow keys to move, and space "
+                          "to shoot!\nPress enter to begin...");
+        text.setPosition({100.0f, 100.0f});
+        text.setFillColor(sf::Color::White);
+        text.setCharacterSize(36);
+    }
+    else if (_state == GAME)
+    {
+        text.setString("Kill count: " + std::to_string(_killCount));
+        text.setCharacterSize(24);
+        text.setFillColor(sf::Color::White);
+        text.setPosition({10.0f, SCREEN_HEIGHT - 40.0f});
+        
+    }
+    else if (_state == END)
+    {
+        text.setString("Final score: " + std::to_string(_killCount) + "\nPlay again? Press enter.");
+        text.setPosition({100.0f, 100.0f});
+        text.setFillColor(sf::Color::White);
+        text.setCharacterSize(36);
+    }
+    window.draw(text);
+    
 }
 
 void Game::render()
 {
     _window.clear(sf::Color::Black);
-    _player.draw(_window);
     displayTexts(_window);
-
-    for (auto enemy : _enemies)
-        enemy->draw(_window);
+    if (_state == GAME)
+    {
+        _player.draw(_window);
+        for (auto enemy : _enemies)
+            enemy->draw(_window);
+    }
     _window.display();
 }

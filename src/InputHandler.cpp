@@ -1,7 +1,7 @@
 #include "InputHandler.hpp"
 #include <iostream>
 
-void InputHandler::handleKeyPress()
+void InputHandler::handleKeyPress() const
 {
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::Escape))
         _window.close();
@@ -18,4 +18,5 @@ void InputHandler::handleKeyPress()
     
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::Space))
         _player.shoot();
+    
 }

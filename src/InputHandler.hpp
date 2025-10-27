@@ -8,7 +8,7 @@ class InputHandler
   public:
     InputHandler(sf::RenderWindow &window, Player &player) : _window(window), _player(player) {};
     ~InputHandler() {};
-    void handleKeyPress();
+    void handleKeyPress() const;
 
   private:
     sf::RenderWindow &_window;

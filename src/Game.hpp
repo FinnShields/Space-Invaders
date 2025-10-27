@@ -7,9 +7,15 @@
 #include "Player.hpp"
 #include "constants.hpp"
 
+enum State
+{
+  START,
+  GAME,
+  END
+};
+
 class Game
 {
-
   public:
     Game(sf::RenderWindow &window, Player &player, InputHandler &inputHandler);
     ~Game() {};
@@ -30,13 +36,19 @@ class Game
     void handleEnemySpeed(float dt);
     void handlePowerups(enemyType type);
     void activatePurplePowerup();
+    void activateBlackPowerup();
     void displayTexts(sf::RenderWindow &window);
+    void gameLoop(float dt);
+    void resetGame();
+    void setState(State state) {
+      _state = state;
+    }
 
   private:
     sf::RenderWindow &_window;
     Player &_player;
-    InputHandler &_inputHandler;
-    std::vector<Enemy*> _enemies;
+    const InputHandler &_inputHandler;
+    std::vector<Enemy *> _enemies;
     float _enemyDirection = 1.0f;
     float _enemyMoveDown = ENEMY_MOVE_DOWN;
     float _enemySpeed = ENEMY_INITIAL_SPEED;
@@ -45,4 +57,5 @@ class Game
     int _killCount = 0;
     sf::Clock _clock;
     sf::Font _font;
+    State _state = START;
 };
