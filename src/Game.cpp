@@ -80,9 +80,10 @@ void Game::handleEnemySpeed(float dt)
 void Game::handleEnemyMovement(float dt)
 {
     bool changeDirection = false;
-    for (auto enemy : _enemies)
+    size_t i = 0;
+    while (i < _enemies.size())
     {
-        sf::RectangleShape &enemyShape = enemy->getShape();
+        sf::RectangleShape &enemyShape = _enemies[i]->getShape();
         float moveX = _enemyDirection * _enemySpeed * dt;
         if (_bluePowerupTime > 0.0f)
             moveX = 0;
@@ -94,7 +95,8 @@ void Game::handleEnemyMovement(float dt)
         }
         if (enemyShape.getPosition().y >= (SCREEN_HEIGHT - (enemyShape.getSize().y / 2)))
             _window.close();
-        handleCollisions(enemy);
+        if (handleCollisions(i) == 0)
+            i++;
     }
     static int count = 0;
     if (changeDirection)
@@ -108,23 +110,28 @@ void Game::handleEnemyMovement(float dt)
     }
 }
 
-void Game::handleCollisions(Enemy *enemy)
+int Game::handleCollisions(size_t enemyIndex)
 {
-    if (collides(enemy->getShape(), _player.getShape()))
+    if (collides(_enemies[enemyIndex]->getShape(), _player.getShape()))
         _window.close();
 
     auto &projectiles = _player.getProjectiles();
-    for (auto p : projectiles)
+    size_t i = 0;
+    while (i < projectiles.size())
     {
-        if (collides(enemy->getShape(), p->getShape()))
+        if (collides(_enemies[enemyIndex]->getShape(), projectiles[i]->getShape()))
         {
-            handlePowerups(enemy->getType());
-            projectiles.erase(std::find(projectiles.begin(), projectiles.end(), p));
-            _enemies.erase(std::find(_enemies.begin(), _enemies.end(), enemy));
+            handlePowerups(_enemies[enemyIndex]->getType());
+            std::swap(projectiles[i], projectiles.back());
+            projectiles.pop_back();
+            std::swap(_enemies[enemyIndex], _enemies.back());
+            _enemies.pop_back();
             _killCount++;
-            return;
+            return 1;
         }
+        i++;
     }
+    return 0;
 }
 
 void Game::handlePowerups(enemyType type)
@@ -141,15 +148,22 @@ void Game::handlePowerups(enemyType type)
 
 void Game::activatePurplePowerup()
 {
-    for (auto enemy : _enemies)
+    size_t i = 0;
+    while (i < _enemies.size())
     {
-        if (enemy->getType() != NORMAL)
+        if (_enemies[i]->getType() != NORMAL)
+        {
+            i++;
             continue;
+        }
         if (std::rand() % 100 < 20)
         {
-            _enemies.erase(std::find(_enemies.begin(), _enemies.end(), enemy));
+            std::swap(_enemies[i], _enemies.back());
+            _enemies.pop_back();
+            continue;
             _killCount++;
         }
+        i++;
     }
 }
 

@@ -24,7 +24,7 @@ class Game
         return _player;
     };
     bool collides(sf::RectangleShape shape1, sf::RectangleShape shape2);
-    void handleCollisions(Enemy* enemy);
+    int handleCollisions(size_t enemyIndex);
     void addNewEnemies();
     void handleEnemyMovement(float dt);
     void handleEnemySpeed(float dt);
