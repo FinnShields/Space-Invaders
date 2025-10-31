@@ -3,9 +3,11 @@
 #include <SFML/Graphics.hpp>
 
 #include "Enemy.hpp"
+#include "EnemyHandler.hpp"
 #include "InputHandler.hpp"
 #include "Player.hpp"
 #include "constants.hpp"
+#include "utils.hpp"
 
 enum State
 {
@@ -17,7 +19,7 @@ enum State
 class Game
 {
   public:
-    Game(sf::RenderWindow &window, Player &player, InputHandler &inputHandler);
+    Game(sf::RenderWindow &window, Player &player, InputHandler &inputHandler, EnemyHandler& enemyHandler);
     ~Game() {};
 
     void initEnemies();
@@ -30,7 +32,8 @@ class Game
         return _player;
     };
     bool collides(sf::RectangleShape shape1, sf::RectangleShape shape2);
-    int handleCollisions(size_t enemyIndex);
+    bool handleCollisions();
+    int handleCollisions2(size_t enemyIndex);
     void addNewEnemies();
     void handleEnemyMovement(float dt);
     void handleEnemySpeed(float dt);
@@ -48,6 +51,11 @@ class Game
     sf::RenderWindow &_window;
     Player &_player;
     const InputHandler &_inputHandler;
+    EnemyHandler& _enemyHandler;
+
+    bool checkEnemyBeenShot(Enemy& enemy);
+    void updateKillCounter(std::vector<Enemy*> enemies);
+
     std::vector<Enemy *> _enemies;
     float _enemyDirection = 1.0f;
     float _enemyMoveDown = ENEMY_MOVE_DOWN;
